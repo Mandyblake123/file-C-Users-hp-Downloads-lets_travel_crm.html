@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lets Travel CRM</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Supervisor Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.7); }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200" id="appBody">
+
+    <script>
+        const DEFAULT_SUPERVISOR = {
+            id: 'u1',
+            username: 'ops@lowendtravel.com',
+            fullName: 'Operations Supervisor',
+            role: 'SUPERVISOR',
+            dept: 'Operations',
+            mustChangePassword: true,
+            password: 'admin123'
+        };
+
+        const INITIAL_USERS = [
+            DEFAULT_SUPERVISOR,
+            { id: 'u2', username: 'sales_john', fullName: 'John Sales Agent', role: 'AGENT', dept: 'Sales', mustChangePassword: false, password: 'password123' },
+            { id: 'u3', username: 'cs_sarah', fullName: 'Sarah CS Agent', role: 'AGENT', dept: 'CS', mustChangePassword: false, password: 'password123' },
+            { id: 'u4', username: 'cs_mike', fullName: 'Mike CS Support', role: 'AGENT', dept: 'CS', mustChangePassword: false, password: 'password123' }
+        ];
+
+        const SALE_TYPES = [
+            "Cancellation with refund",
+            "Cancellation with credit",
+            "Date change",
+            "Name correction",
+            "Schedule change- Changes",
+            "Schedule change- refund",
+            "New Booking",
+            "Insurance",
+            "pet addition",
+            "Infant Addition",
+            "ARC"
+        ];
+
+        const CS_STATUSES = [
+            "Open",
+            "Pending",
+            "Waiting on customer",
+            "Pending with Airline",
+            "Pending with Travel agency",
+            "Pending with sales agent",
+            "Closed",
+            "Disputed Transaction",
+            "Case not possible",
+            "Case denied"
+        ];
+
+        const INITIAL_CASES = [
+            {
+                caseId: 'CASE-2026-101',
+                bookingId: 'PNR-884920',
+                date: '2026-09-28',
+                saleType: 'Date change',
+                mcoAmount: 150.00,
+                mcoCurrency: 'USD',
+                passengers: ['Alex Smith', 'Emma Smith'],
+                phone: '+1 555-0192',
+                email: 'alex.s@example.com',
+                status: 'Pending with Airline',
+                assignedTo: 'cs_sarah',
+                salesAgent: 'sales_john',
+                remarks: 'Requested date change for outward flight due to emergency.',
+                tatShare: '24 Hours',
+                followUpDate: '2026-09-29T14:30',
+                createdAt: '2026-09-28T09:15:00.000Z',
+                attachments: [
+                    { name: 'passport_scan.pdf', size: '1.2 MB', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', type: 'pdf' }
+                ],
+                feed: [
+                    { author: 'sales_john', role: 'Sales Agent', text: 'Case initiated. PNR verified with carrier.', timestamp: '2026-09-28T09:15:00.000Z', attachmentName: 'passport_scan.pdf' },
+                    { author: 'cs_sarah', role: 'CS Agent', text: 'Submitted waiver request to carrier.', timestamp: '2026-09-28T11:20:00.000Z' },
+                    { author: 'ops@lowendtravel.com', role: 'Supervisor', text: '[Status: Pending with Airline] Expedite review prior to departure.', timestamp: '2026-09-28T17:04:07.000Z' }
+                ],
+                auditLogs: [
+                    { timestamp: '2026-09-28 09:15:00', actor: 'sales_john', action: 'Created case CASE-2026-101' },
+                    { timestamp: '2026-09-28 11:20:00', actor: 'cs_sarah', action: 'Updated status to Pending with Airline' },
+                    { timestamp: '2026-09-28 17:04:07', actor: 'ops@lowendtravel.com', action: 'Added supervisor comment' }
+                ]
+            },
+            {
+                caseId: 'CASE-2026-102',
+                bookingId: 'PNR-772109',
+                date: '2026-09-29',
+                saleType: 'Cancellation with refund',
+                mcoAmount: 320.50,
+                mcoCurrency: 'CAD',
+                passengers: ['David Miller'],
+                phone: '+1 416-555-0143',
+                email: 'dmiller@example.ca',
+                status: 'Open',
+                assignedTo: 'cs_mike',
+                salesAgent: 'sales_john',
+                remarks: 'Full cancellation requested as flight was rescheduled by carrier.',
+                tatShare: '12 Hours',
+                followUpDate: '2026-09-29T16:00',
+                createdAt: '2026-09-29T08:00:00.000Z',
+                attachments: [],
+                feed: [
+                    { author: 'sales_john', role: 'Sales Agent', text: 'Created case with Booking ID PNR-772109', timestamp: '2026-09-29T08:00:00.000Z' }
+                ],
+                auditLogs: [
+                    { timestamp: '2026-09-29 08:00:00', actor: 'sales_john', action: 'Created case CASE-2026-102' }
+                ]
+            }
+        ];
+
+        // Store initialization
+        if (!localStorage.getItem('crm_users')) {
+            localStorage.setItem('crm_users', JSON.stringify(INITIAL_USERS));
+        }
+        if (!localStorage.getItem('crm_cases')) {
+            localStorage.setItem('crm_cases', JSON.stringify(INITIAL_CASES));
+        }
+
+        let currentUser = JSON.parse(localStorage.getItem('crm_current_user')) || null;
+
+        function getUsers() {
+            return JSON.parse(localStorage.getItem('crm_users')) || [];
+        }
+        function saveUsers(users) {
+            localStorage.setItem('crm_users', JSON.stringify(users));
+        }
+        function getCases() {
+            return JSON.parse(localStorage.getItem('crm_cases')) || [];
+        }
+        function saveCases(cases) {
+            localStorage.setItem('crm_cases', JSON.stringify(cases));
+        }
+    </script>
+
+    <header class="bg-slate-800/90 border-b border-slate-700/60 sticky top-0 z-30 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 font-bold text-xl">
+                        <i class="fa-solid font-bold fa-plane-departure"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-extrabold bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-300 bg-clip-text text-transparent">Lets Travel CRM</span>
+                        <span id="activeRoleBadge" class="hidden ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-700 text-slate-300 border border-slate-600"></span>
+                    </div>
+                </div>
+
+                <!-- Right Action Navigation Bar -->
+                <div class="flex items-center space-x-3">
+                    <!-- Dark/Light Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors" title="Toggle Dark/Light Mode">
+                        <i id="themeIcon" class="fa-solid fa-sun text-amber-400 text-lg"></i>
+                    </button>
+
+                    <!-- User Profile Controls -->
+                    <div id="userHeaderSection" class="hidden items-center space-x-3 pl-3 border-l border-slate-700">
+                        <div class="text-right hidden sm:block">
+                            <div id="headerUserName" class="text-sm font-semibold text-slate-200">User</div>
+                            <div id="headerUserDept" class="text-xs text-slate-400">Department</div>
+                        </div>
+                        <button onclick="logout()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors flex items-center space-x-1">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <div id="loginSection" class="max-w-md mx-auto my-12 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-8 shadow-2xl backdrop-blur-md">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-3 rounded-full bg-brand-500/10 text-brand-400 mb-3">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white">CRM Portal Login</h2>
+                <p class="text-xs text-slate-400 mt-1">Access Sales, Customer Service, & Operations</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Username / Supervisor ID</label>
+                    <input type="text" id="loginUsername" required placeholder="e.g. ops@lowendtravel.com or sales_john" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-brand-600 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-brand-500/20 transition duration-150">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-700/60 text-xs text-slate-400 space-y-1 bg-slate-900/40 p-3 rounded-lg border border-slate-800">
+                <div class="font-semibold text-slate-300 mb-1"><i class="fa-solid fa-circle-info mr-1 text-cyan-400"></i> Demo Credentials:</div>
+                <div>• <strong class="text-slate-200">Supervisor:</strong> ops@lowendtravel.com | password: <code class="text-brand-300">admin123</code></div>
+                <div>• <strong class="text-slate-200">Sales Agent:</strong> sales_john | password: <code class="text-brand-300">password123</code></div>
+                <div>• <strong class="text-slate-200">CS Agent:</strong> cs_sarah | password: <code class="text-brand-300">password123</code></div>
+            </div>
+        </div>
+
+        <div id="passwordResetSection" class="hidden max-w-md mx-auto my-12 bg-slate-800 border border-amber-500/30 rounded-2xl p-8 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-3 rounded-full bg-amber-500/10 text-amber-400 mb-3">
+                    <i class="fa-solid fa-key text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white">Password Reset Required</h2>
+                <p class="text-xs text-amber-300/80 mt-1">First login detected. Please set a new secure password to proceed.</p>
+            </div>
+
+            <form onsubmit="handleForcePasswordReset(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">New Password</label>
+                    <input type="password" id="resetNewPassword" minlength="6" required placeholder="Enter new password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Confirm New Password</label>
+                    <input type="password" id="resetConfirmPassword" minlength="6" required placeholder="Confirm new password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-lg shadow-lg transition">
+                    Update Password & Continue
+                </button>
+            </form>
+        </div>
+
+        <div id="mainDashboard" class="hidden space-y-6">
+
+            <!-- Tab Navigation Header -->
+            <div class="flex flex-wrap items-center justify-between border-b border-slate-700/80 pb-3 gap-3">
+                <div class="flex items-center space-x-2" id="navigationTabs">
+                    <!-- Tabs generated dynamically based on user role -->
+                </div>
+                <div class="text-xs text-slate-400 font-medium">
+                    <i class="fa-solid fa-clock text-slate-500 mr-1"></i> <span id="currentDateDisplay"></span>
+                </div>
+            </div>
+
+            <!-- TAB 1: SUPERVISOR DASHBOARD & USER MANAGEMENT -->
+            <div id="tabSupervisor" class="tab-content hidden space-y-6">
+                
+                <!-- KPI Analytics Summary Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Active Cases</span>
+                            <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><i class="fa-solid fa-folder-open"></i></div>
+                        </div>
+                        <div id="kpiTotalCases" class="text-2xl font-bold text-white mt-2">0</div>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's Follow-ups</span>
+                            <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><i class="fa-solid fa-calendar-day"></i></div>
+                        </div>
+                        <div id="kpiTodaysFollowups" class="text-2xl font-bold text-amber-400 mt-2">0</div>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">MCO Total (USD)</span>
+                            <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg"><i class="fa-solid fa-dollar-sign"></i></div>
+                        </div>
+                        <div id="kpiMcoUSD" class="text-2xl font-bold text-emerald-400 mt-2">$0.00</div>
+                    </div>
+
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">MCO Total (CAD)</span>
+                            <div class="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg"><i class="fa-solid fa-dollar-sign"></i></div>
+                        </div>
+                        <div id="kpiMcoCAD" class="text-2xl font-bold text-cyan-400 mt-2">CA$0.00</div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl">
+                        <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center justify-between">
+                            <span>Status Breakdown</span>
+                            <i class="fa-solid fa-chart-pie text-slate-400"></i>
+                        </h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Today's Follow-up Tracker Widget -->
+                    <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-xl flex flex-col">
+                        <h3 class="text-sm font-semibold text-slate-200 mb-4 flex items-center justify-between">
+                            <span>Today's Follow-up Tracker</span>
+                            <span class="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-300 rounded-full font-medium">Action Required</span>
+                        </h3>
+                        <div id="todaysFollowupsList" class="flex-1 space-y-3 overflow-y-auto max-h-60 custom-scrollbar pr-1">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR USER MANAGEMENT SECTION -->
+                <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-6 shadow-md">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-700">
+                        <div>
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-users-gear text-brand-400"></i>
+                                Team User Accounts Management
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Manage agents, create sub-users without requiring an email address, or update credentials.</p>
+                        </div>
+                        <button onclick="openCreateUserModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-md shadow-brand-600/20 transition">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Create New Sub-User</span>
+                        </button>
+                    </div>
+
+                    <!-- Sub-users Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase font-semibold border-b border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3">Username</th>
+                                    <th class="px-4 py-3">Full Name</th>
+                                    <th class="px-4 py-3">Department</th>
+                                    <th class="px-4 py-3">Role</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="divide-y divide-slate-700/60">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB 2: SALES CASE CREATION MODULE -->
+            <div id="tabSales" class="tab-content hidden space-y-6">
+                <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-6 shadow-lg max-w-4xl mx-auto">
+                    <div class="mb-6 pb-4 border-b border-slate-700 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-cart-plus text-emerald-400"></i>
+                                Submit New Travel Case
+                            </h3>
+                            <p class="text-xs text-slate-400">Complete required details to register case for CS dispatch.</p>
+                        </div>
+                        <span class="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 font-medium">Sales Portal</span>
+                    </div>
+
+                    <form onsubmit="handleSalesFormSubmit(event)" class="space-y-6">
+                        <!-- Row 1: Date & Booking ID -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Date <span class="text-red-400">*</span></label>
+                                <input type="date" id="saleDate" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Booking ID / PNR <span class="text-red-400">*</span></label>
+                                <input type="text" id="saleBookingId" required placeholder="e.g. PNR-998821" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Type of Sale & MCO Value + Currency -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="sm:col-span-1">
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Type of Sale <span class="text-red-400">*</span></label>
+                                <select id="saleTypeSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                                    <!-- Options populated dynamically -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">MCO Amount <span class="text-red-400">*</span></label>
+                                <input type="number" step="0.01" id="saleMcoAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Currency <span class="text-red-400">*</span></label>
+                                <select id="saleMcoCurrency" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                                    <option value="USD">USD ($)</option>
+                                    <option value="CAD">CAD (CA$)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Multi-Passenger Add/Remove List -->
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/80 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Passenger List <span class="text-red-400">*</span></label>
+                                <button type="button" onclick="addPassengerRow()" class="text-xs text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1">
+                                    <i class="fa-solid fa-plus-circle"></i> Add Passenger
+                                </button>
+                            </div>
+                            <div id="passengerContainer" class="space-y-2">
+                                <!-- Passenger inputs rendered here -->
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Phone, Email, Initial Status & TAT Share -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Phone Number <span class="text-red-400">*</span></label>
+                                <input type="tel" id="salePhone" required placeholder="+1 555-0100" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Customer Email ID <span class="text-red-400">*</span></label>
+                                <input type="email" id="saleEmail" required placeholder="passenger@example.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Initial Status <span class="text-red-400">*</span></label>
+                                <select id="saleStatus" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                                    <option value="Open">Open</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">TAT Share for Closure <span class="text-red-400">*</span></label>
+                                <input type="text" id="saleTatShare" required placeholder="e.g. 24 Hours / Same Day" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Row 5: Mandatory Remarks Free Text -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Remarks / Notes <span class="text-red-400">*</span></label>
+                            <textarea id="saleRemarks" required rows="3" placeholder="Provide detailed operational context, airline fare rules, or special requests..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500"></textarea>
+                        </div>
+
+                        <!-- Row 6: Attachments Upload -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Upload Documents (JPG, PNG, PDF)</label>
+                            <div class="flex items-center space-x-3">
+                                <label class="cursor-pointer bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg text-xs font-semibold border border-slate-600 transition flex items-center gap-2">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                    <span>Choose File</span>
+                                    <input type="file" id="saleFileInput" accept=".jpg,.jpeg,.png,.pdf" class="hidden" onchange="handleFileSelection(event)">
+                                </label>
+                                <span id="saleFileNameDisplay" class="text-xs text-slate-400 italic">No file attached</span>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-4 border-t border-slate-700">
+                            <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>Create & Dispatch Case</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 3: CS MODULE & ALL CASES MASTER GRID -->
+            <div id="tabCS" class="tab-content hidden space-y-6">
+                
+                <!-- Cases List Control Bar -->
+                <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3 flex-1 min-w-[280px]">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                            <input type="text" id="searchCasesInput" onkeyup="renderCasesTable()" placeholder="Search by Case ID, PNR, Passenger, or Agent..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        </div>
+                        <select id="filterStatusSelect" onchange="renderCasesTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                            <option value="ALL">All Statuses</option>
+                            <!-- Filter options populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="text-xs text-slate-400">
+                        Showing <strong id="caseCountBadge" class="text-white">0</strong> cases
+                    </div>
+                </div>
+
+                <!-- Cases Master Table -->
+                <div class="bg-slate-800/90 border border-slate-700 rounded-xl shadow-md overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold border-b border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3">Case ID</th>
+                                    <th class="px-4 py-3">Booking ID</th>
+                                    <th class="px-4 py-3">Sale Type</th>
+                                    <th class="px-4 py-3">Passengers</th>
+                                    <th class="px-4 py-3">MCO Value</th>
+                                    <th class="px-4 py-3">Assigned CS</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">Follow-up</th>
+                                    <th class="px-4 py-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="casesTableBody" class="divide-y divide-slate-700/60">
+                                <!-- Rendered dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <div id="caseDetailModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="p-5 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span id="modalCaseIdBadge" class="text-lg font-bold text-white">CASE-ID</span>
+                    <span id="modalStatusBadge" class="px-2.5 py-1 text-xs font-bold rounded-full">Status</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <!-- SEPARATED ACTIVITY LOG BUTTON -->
+                    <button onclick="openActivityLogModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200 rounded-lg transition border border-slate-600 flex items-center gap-1.5">
+                        📜 View Activity Log
+                    </button>
+                    <button onclick="closeCaseModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div class="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                
+                <!-- Locked / Read-Only Sales Data Card -->
+                <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-4">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-700/60">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400"><i class="fa-solid fa-lock text-slate-500 mr-1.5"></i> Original Sales Information (Locked)</span>
+                        <span id="modalSalesAgent" class="text-xs text-brand-400 font-medium">By: Agent</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                        <div>
+                            <span class="text-slate-500 block">Booking ID / PNR:</span>
+                            <span id="modalBookingId" class="font-bold text-slate-200 text-sm"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">Date of Booking:</span>
+                            <span id="modalDate" class="font-semibold text-slate-300"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">Type of Sale:</span>
+                            <span id="modalSaleType" class="font-semibold text-slate-300"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">MCO Value:</span>
+                            <span id="modalMcoValue" class="font-bold text-emerald-400 text-sm"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2 border-t border-slate-700/40">
+                        <div>
+                            <span class="text-slate-500 block">Passenger(s):</span>
+                            <span id="modalPassengers" class="font-semibold text-slate-200"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">Contact Phone:</span>
+                            <span id="modalPhone" class="font-semibold text-slate-300"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">Customer Email:</span>
+                            <span id="modalEmail" class="font-semibold text-slate-300"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUPERVISOR REASSIGNMENT CONTROL (Visible to Supervisor Only) -->
+                <div id="supervisorAssignControl" class="hidden bg-slate-800/80 border border-brand-500/30 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-200 block">Assign CS Representative</span>
+                        <span class="text-xs text-slate-400">Reassign this case to another CS team member</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <select id="modalAssignCsSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                            <!-- Options -->
+                        </select>
+                        <button onclick="saveAssignmentChange()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold">
+                            Assign
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AGENT REMARKS & ATTACHMENTS FEED CARD -->
+                <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 space-y-3">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-comments text-cyan-400"></i>
+                        Agent Remarks & Attachments Feed
+                    </h4>
+                    
+                    <!-- Feed container with softer light color formatting for remarks -->
+                    <div id="modalFeedContainer" class="space-y-3 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Populated dynamically with soft light remarks (#94a3b8 in dark mode) -->
+                    </div>
+                </div>
+
+                <!-- CS UPDATE ACTION FORM -->
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-brand-400"></i>
+                        Update Case Progress
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Update Status</label>
+                            <select id="modalUpdateStatus" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                                <!-- Statuses populated dynamically -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Follow-up Date & Time</label>
+                            <input type="datetime-local" id="modalFollowUpDate" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Action Remarks / Response</label>
+                        <textarea id="modalActionRemarks" rows="2" placeholder="Add resolution notes, airline correspondence update, or customer response..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Attach Action Proof Document (JPG, PNG, PDF)</label>
+                        <div class="flex items-center space-x-3">
+                            <label class="cursor-pointer bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-600 transition flex items-center gap-2">
+                                <i class="fa-solid fa-upload"></i>
+                                <span>Attach File</span>
+                                <input type="file" id="modalFileInput" accept=".jpg,.jpeg,.png,.pdf" class="hidden" onchange="handleModalFileSelection(event)">
+                            </label>
+                            <span id="modalFileNameDisplay" class="text-xs text-slate-400 italic">No file attached</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 text-right">
+                        <button onclick="submitCsCaseUpdate()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-lg text-xs shadow-md transition">
+                            Save CS Response
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="activityLogModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-brand-400"></i>
+                    Case Activity Audit History
+                </h3>
+                <button onclick="closeActivityLogModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="activityLogContent" class="p-5 overflow-y-auto space-y-3 custom-scrollbar flex-1 text-xs">
+                <!-- Log entries rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <div id="createUserModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-brand-400"></i>
+                    Create Sub-User Account
+                </h3>
+                <button onclick="closeCreateUserModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">No email address required. Enter sub-user credentials below.</p>
+
+            <form onsubmit="handleCreateSubUser(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Username <span class="text-red-400">*</span></label>
+                    <input type="text" id="newSubUsername" required placeholder="e.g. sales_agent2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Full Name <span class="text-red-400">*</span></label>
+                    <input type="text" id="newSubFullName" required placeholder="e.g. Jane Doe" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Department <span class="text-red-400">*</span></label>
+                    <select id="newSubDept" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white">
+                        <option value="Sales">Sales</option>
+                        <option value="CS">Customer Service (CS)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Initial Password <span class="text-red-400">*</span></label>
+                    <input type="password" id="newSubPassword" required minlength="6" placeholder="Initial temporary password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeCreateUserModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="changePasswordModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-amber-400"></i>
+                    Change User Password
+                </h3>
+                <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">Changing password for user: <strong id="changePasswordUsername" class="text-brand-300"></strong></p>
+
+            <form onsubmit="handleChangeUserPasswordSubmit(event)" class="space-y-4">
+                <input type="hidden" id="changePasswordUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">New Password <span class="text-red-400">*</span></label>
+                    <input type="password" id="modalAdminNewPassword" minlength="6" required placeholder="Enter new password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg shadow transition">Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentSelectedCase = null;
+        let selectedSalesFile = null;
+        let selectedModalFile = null;
+        let statusChartInstance = null;
+
+        window.onload = function() {
+            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            initApp();
+        };
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                themeIcon.className = 'fa-solid fa-moon text-slate-600 text-lg';
+            } else {
+                html.classList.add('dark');
+                themeIcon.className = 'fa-solid fa-sun text-amber-400 text-lg';
+            }
+        }
+
+        function initApp() {
+            if (!currentUser) {
+                showSection('loginSection');
+                document.getElementById('userHeaderSection').classList.add('hidden');
+                document.getElementById('activeRoleBadge').classList.add('hidden');
+                return;
+            }
+
+            // Check if mandatory password reset is flagged
+            if (currentUser.mustChangePassword) {
+                showSection('passwordResetSection');
+                document.getElementById('userHeaderSection').classList.remove('hidden');
+                document.getElementById('headerUserName').innerText = currentUser.fullName;
+                document.getElementById('headerUserDept').innerText = currentUser.dept;
+                return;
+            }
+
+            // Normal Logged In App State
+            document.getElementById('userHeaderSection').classList.remove('hidden');
+            document.getElementById('headerUserName').innerText = currentUser.fullName;
+            document.getElementById('headerUserDept').innerText = currentUser.dept;
+
+            const badge = document.getElementById('activeRoleBadge');
+            badge.innerText = currentUser.role === 'SUPERVISOR' ? 'SUPERVISOR' : currentUser.dept.toUpperCase();
+            badge.classList.remove('hidden');
+
+            showSection('mainDashboard');
+            setupTabs();
+            renderSupervisorSection();
+            renderCasesTable();
+        }
+
+        function showSection(id) {
+            ['loginSection', 'passwordResetSection', 'mainDashboard'].forEach(sec => {
+                document.getElementById(sec).classList.add('hidden');
+            });
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const uInput = document.getElementById('loginUsername').value.trim();
+            const pInput = document.getElementById('loginPassword').value.trim();
+
+            const users = getUsers();
+            const user = users.find(u => u.username.toLowerCase() === uInput.toLowerCase() && u.password === pInput);
+
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('crm_current_user', JSON.stringify(currentUser));
+                initApp();
+            } else {
+                alert('Invalid Username or Password.');
+            }
+        }
+
+        function handleForcePasswordReset(e) {
+            e.preventDefault();
+            const p1 = document.getElementById('resetNewPassword').value;
+            const p2 = document.getElementById('resetConfirmPassword').value;
+
+            if (p1 !== p2) {
+                alert('Passwords do not match.');
+                return;
+            }
+
+            const users = getUsers();
+            const idx = users.findIndex(u => u.id === currentUser.id);
+            if (idx !== -1) {
+                users[idx].password = p1;
+                users[idx].mustChangePassword = false;
+                saveUsers(users);
+
+                currentUser = users[idx];
+                localStorage.setItem('crm_current_user', JSON.stringify(currentUser));
+                alert('Password updated successfully!');
+                initApp();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('crm_current_user');
+            initApp();
+        }
+
+        function setupTabs() {
+            const tabsContainer = document.getElementById('navigationTabs');
+            tabsContainer.innerHTML = '';
+
+            let tabs = [];
+            if (currentUser.role === 'SUPERVISOR') {
+                tabs = [
+                    { id: 'tabSupervisor', label: 'Supervisor Dashboard', icon: 'fa-chart-line' },
+                    { id: 'tabCS', label: 'All Cases Master View', icon: 'fa-list-check' },
+                    { id: 'tabSales', label: 'New Case Entry', icon: 'fa-plus' }
+                ];
+            } else if (currentUser.dept === 'Sales') {
+                tabs = [
+                    { id: 'tabSales', label: 'Submit Case', icon: 'fa-plus' },
+                    { id: 'tabCS', label: 'Sales Cases Tracker', icon: 'fa-list-check' }
+                ];
+            } else { // CS Agent
+                tabs = [
+                    { id: 'tabCS', label: 'CS Queue & Cases', icon: 'fa-headset' }
+                ];
+            }
+
+            tabs.forEach((t, i) => {
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition ${i === 0 ? 'bg-brand-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+                btn.innerHTML = `<i class="fa-solid ${t.icon}"></i><span>${t.label}</span>`;
+                btn.onclick = () => switchTab(t.id, btn);
+                tabsContainer.appendChild(btn);
+            });
+
+            // Populate Sale Type Dropdown
+            const saleTypeSelect = document.getElementById('saleTypeSelect');
+            saleTypeSelect.innerHTML = SALE_TYPES.map(st => `<option value="${st}">${st}</option>`).join('');
+
+            // Populate Filter Status
+            const filterSelect = document.getElementById('filterStatusSelect');
+            filterSelect.innerHTML = '<option value="ALL">All Statuses</option>' + CS_STATUSES.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            // Reset initial passenger list
+            document.getElementById('passengerContainer').innerHTML = '';
+            addPassengerRow();
+
+            // Set default date
+            document.getElementById('saleDate').value = new Date().toISOString().split('T')[0];
+
+            // Open first tab by default
+            if (tabs.length > 0) {
+                switchTab(tabs[0].id, tabsContainer.children[0]);
+            }
+        }
+
+        function switchTab(tabId, targetBtn) {
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            const navBtns = document.getElementById('navigationTabs').children;
+            for (let b of navBtns) {
+                b.className = 'px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-slate-800 text-slate-300 hover:bg-slate-700';
+            }
+            targetBtn.className = 'px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-brand-600 text-white shadow';
+
+            if (tabId === 'tabSupervisor') {
+                renderSupervisorSection();
+            } else if (tabId === 'tabCS') {
+                renderCasesTable();
+            }
+        }
+
+        function addPassengerRow() {
+            const container = document.getElementById('passengerContainer');
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'flex items-center space-x-2 passenger-row';
+            rowDiv.innerHTML = `
+                <input type="text" required placeholder="Full Passenger Name" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                <button type="button" onclick="this.parentElement.remove()" class="p-1.5 text-slate-400 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+            `;
+            container.appendChild(rowDiv);
+        }
+
+        function handleFileSelection(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedSalesFile = {
+                    name: file.name,
+                    size: (file.size / 1024).toFixed(1) + ' KB',
+                    type: file.type.includes('pdf') ? 'pdf' : 'image',
+                    url: URL.createObjectURL(file)
+                };
+                document.getElementById('saleFileNameDisplay').innerText = `${file.name} (${selectedSalesFile.size})`;
+            }
+        }
+
+        function handleSalesFormSubmit(e) {
+            e.preventDefault();
+
+            const pInputs = document.querySelectorAll('.passenger-row input');
+            const passengers = Array.from(pInputs).map(inp => inp.value.trim()).filter(v => v !== '');
+
+            if (passengers.length === 0) {
+                alert('Please add at least one passenger.');
+                return;
+            }
+
+            const cases = getCases();
+            const newCaseId = 'CASE-2026-' + Math.floor(100 + Math.random() * 900);
+
+            const newCase = {
+                caseId: newCaseId,
+                date: document.getElementById('saleDate').value,
+                bookingId: document.getElementById('saleBookingId').value.trim(),
+                saleType: document.getElementById('saleTypeSelect').value,
+                mcoAmount: parseFloat(document.getElementById('saleMcoAmount').value) || 0,
+                mcoCurrency: document.getElementById('saleMcoCurrency').value,
+                passengers: passengers,
+                phone: document.getElementById('salePhone').value.trim(),
+                email: document.getElementById('saleEmail').value.trim(),
+                status: document.getElementById('saleStatus').value,
+                tatShare: document.getElementById('saleTatShare').value.trim(),
+                remarks: document.getElementById('saleRemarks').value.trim(),
+                salesAgent: currentUser.username,
+                assignedTo: 'cs_sarah', // Auto-assigned by default
+                createdAt: new Date().toISOString(),
+                attachments: selectedSalesFile ? [selectedSalesFile] : [],
+                feed: [
+                    {
+                        author: currentUser.username,
+                        role: 'Sales Agent',
+                        text: document.getElementById('saleRemarks').value.trim(),
+                        timestamp: new Date().toISOString(),
+                        attachmentName: selectedSalesFile ? selectedSalesFile.name : null
+                    }
+                ],
+                auditLogs: [
+                    {
+                        timestamp: new Date().toLocaleString(),
+                        actor: currentUser.username,
+                        action: `Created Case ${newCaseId} (Booking ID: ${document.getElementById('saleBookingId').value.trim()})`
+                    }
+                ]
+            };
+
+            cases.unshift(newCase);
+            saveCases(cases);
+
+            alert(`Case ${newCaseId} created successfully!`);
+            e.target.reset();
+            selectedSalesFile = null;
+            document.getElementById('saleFileNameDisplay').innerText = 'No file attached';
+            setupTabs();
+        }
+
+        function renderSupervisorSection() {
+            const users = getUsers();
+            const cases = getCases();
+
+            // Render Sub-Users Table
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = users.map(u => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="px-4 py-3 font-semibold text-slate-200">${u.username}</td>
+                    <td class="px-4 py-3 text-slate-300">${u.fullName}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${u.dept === 'Sales' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-cyan-500/10 text-cyan-400'}">${u.dept}</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-400">${u.role}</td>
+                    <td class="px-4 py-3">
+                        ${u.mustChangePassword ? '<span class="text-amber-400 text-xs"><i class="fa-solid fa-triangle-exclamation"></i> Reset Flagged</span>' : '<span class="text-emerald-400 text-xs"><i class="fa-solid fa-check"></i> Active</span>'}
+                    </td>
+                    <td class="px-4 py-3 text-right space-x-2">
+                        <button onclick="openChangePasswordModal('${u.id}', '${u.username}')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded text-xs border border-amber-500/20">
+                            <i class="fa-solid fa-key mr-1"></i> Pass
+                        </button>
+                        ${u.role !== 'SUPERVISOR' ? `
+                            <button onclick="deleteUserAccount('${u.id}')" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs border border-red-500/20">
+                                <i class="fa-solid fa-trash mr-1"></i> Delete
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+
+            // KPI calculations
+            document.getElementById('kpiTotalCases').innerText = cases.length;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todaysFollowups = cases.filter(c => c.followUpDate && c.followUpDate.startsWith(todayStr));
+            document.getElementById('kpiTodaysFollowups').innerText = todaysFollowups.length;
+
+            let usdTotal = 0, cadTotal = 0;
+            cases.forEach(c => {
+                if (c.mcoCurrency === 'USD') usdTotal += c.mcoAmount;
+                else cadTotal += c.mcoAmount;
+            });
+            document.getElementById('kpiMcoUSD').innerText = '$' + usdTotal.toFixed(2);
+            document.getElementById('kpiMcoCAD').innerText = 'CA$' + cadTotal.toFixed(2);
+
+            // Today's Followup Widget List
+            const followUpList = document.getElementById('todaysFollowupsList');
+            if (todaysFollowups.length === 0) {
+                followUpList.innerHTML = '<div class="text-xs text-slate-500 italic py-4 text-center">No scheduled follow-ups for today.</div>';
+            } else {
+                followUpList.innerHTML = todaysFollowups.map(c => `
+                    <div onclick="openCaseModal('${c.caseId}')" class="p-3 bg-slate-900/60 rounded-lg border border-amber-500/20 hover:border-amber-500/50 cursor-pointer transition flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-slate-200 text-xs">${c.caseId} (${c.bookingId})</span>
+                            <span class="text-xs text-slate-400 block">${c.passengers.join(', ')}</span>
+                        </div>
+                        <span class="text-xs font-semibold text-amber-400">${c.followUpDate.split('T')[1] || 'Today'}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Status Pie Chart
+            const statusCounts = {};
+            CS_STATUSES.forEach(s => statusCounts[s] = 0);
+            cases.forEach(c => {
+                if (statusCounts[c.status] !== undefined) statusCounts[c.status]++;
+                else statusCounts[c.status] = 1;
+            });
+
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+
+            statusChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusCounts).filter(k => statusCounts[k] > 0),
+                    datasets: [{
+                        data: Object.values(statusCounts).filter(v => v > 0),
+                        backgroundColor: ['#0284c7', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#64748b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function openCreateUserModal() {
+            document.getElementById('createUserModal').classList.remove('hidden');
+        }
+        function closeCreateUserModal() {
+            document.getElementById('createUserModal').classList.add('hidden');
+        }
+
+        function handleCreateSubUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('newSubUsername').value.trim();
+            const fullName = document.getElementById('newSubFullName').value.trim();
+            const dept = document.getElementById('newSubDept').value;
+            const password = document.getElementById('newSubPassword').value;
+
+            const users = getUsers();
+            if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                alert('Username already exists!');
+                return;
+            }
+
+            const newUser = {
+                id: 'u_' + Date.now(),
+                username,
+                fullName,
+                dept,
+                role: 'AGENT',
+                password,
+                mustChangePassword: true
+            };
+
+            users.push(newUser);
+            saveUsers(users);
+            alert(`User ${username} created successfully! Initial password reset enforced.`);
+            closeCreateUserModal();
+            renderSupervisorSection();
+        }
+
+        function openChangePasswordModal(userId, username) {
+            document.getElementById('changePasswordUserId').value = userId;
+            document.getElementById('changePasswordUsername').innerText = username;
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+        }
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        }
+
+        function handleChangeUserPasswordSubmit(e) {
+            e.preventDefault();
+            const userId = document.getElementById('changePasswordUserId').value;
+            const newPass = document.getElementById('modalAdminNewPassword').value;
+
+            const users = getUsers();
+            const idx = users.findIndex(u => u.id === userId);
+            if (idx !== -1) {
+                users[idx].password = newPass;
+                users[idx].mustChangePassword = true; // flag reset
+                saveUsers(users);
+                alert(`Password for ${users[idx].username} updated!`);
+                closeChangePasswordModal();
+                renderSupervisorSection();
+            }
+        }
+
+        function deleteUserAccount(userId) {
+            if (!confirm('Are you sure you want to delete this sub-user account?')) return;
+            let users = getUsers();
+            users = users.filter(u => u.id !== userId);
+            saveUsers(users);
+            renderSupervisorSection();
+        }
+
+        function renderCasesTable() {
+            let cases = getCases();
+            const query = document.getElementById('searchCasesInput').value.toLowerCase();
+            const filterStatus = document.getElementById('filterStatusSelect').value;
+
+            // Apply Agent Role restrictions
+            if (currentUser.role !== 'SUPERVISOR') {
+                if (currentUser.dept === 'Sales') {
+                    cases = cases.filter(c => c.salesAgent === currentUser.username);
+                } else if (currentUser.dept === 'CS') {
+                    cases = cases.filter(c => c.assignedTo === currentUser.username || c.status === 'Open');
+                }
+            }
+
+            // Apply Filters
+            if (filterStatus !== 'ALL') {
+                cases = cases.filter(c => c.status === filterStatus);
+            }
+            if (query) {
+                cases = cases.filter(c => 
+                    c.caseId.toLowerCase().includes(query) ||
+                    c.bookingId.toLowerCase().includes(query) ||
+                    c.passengers.some(p => p.toLowerCase().includes(query)) ||
+                    c.salesAgent.toLowerCase().includes(query)
+                );
+            }
+
+            document.getElementById('caseCountBadge').innerText = cases.length;
+
+            const tbody = document.getElementById('casesTableBody');
+            if (cases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-slate-500 italic">No cases found matching criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = cases.map(c => `
+                <tr class="hover:bg-slate-800/50 transition">
+                    <td class="px-4 py-3 font-bold text-brand-400">${c.caseId}</td>
+                    <td class="px-4 py-3 font-medium text-slate-200">${c.bookingId}</td>
+                    <td class="px-4 py-3 text-slate-300">${c.saleType}</td>
+                    <td class="px-4 py-3 text-slate-300">${c.passengers.join(', ')}</td>
+                    <td class="px-4 py-3 font-bold text-emerald-400">${c.mcoCurrency === 'USD' ? '$' : 'CA$'}${c.mcoAmount.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-slate-400">${c.assignedTo || 'Unassigned'}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${getStatusBadgeStyle(c.status)}">${c.status}</span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-400">${c.followUpDate ? c.followUpDate.replace('T', ' ') : '-'}</td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="openCaseModal('${c.caseId}')" class="px-3 py-1 bg-brand-600/20 hover:bg-brand-600 text-brand-300 hover:text-white border border-brand-500/30 rounded text-xs font-semibold transition">
+                            View / Edit
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadgeStyle(status) {
+            switch(status) {
+                case 'Open': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+                case 'Closed': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                case 'Pending with Airline': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                case 'Pending': return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20';
+                case 'Disputed Transaction': return 'bg-red-500/10 text-red-400 border border-red-500/20';
+                default: return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+            }
+        }
+
+        function openCaseModal(caseId) {
+            const cases = getCases();
+            currentSelectedCase = cases.find(c => c.caseId === caseId);
+
+            if (!currentSelectedCase) return;
+
+            document.getElementById('modalCaseIdBadge').innerText = currentSelectedCase.caseId;
+            const statusBadge = document.getElementById('modalStatusBadge');
+            statusBadge.innerText = currentSelectedCase.status;
+            statusBadge.className = `px-2.5 py-1 text-xs font-bold rounded-full ${getStatusBadgeStyle(currentSelectedCase.status)}`;
+
+            // Populate Locked Sales Info
+            document.getElementById('modalSalesAgent').innerText = `Submitted by: ${currentSelectedCase.salesAgent}`;
+            document.getElementById('modalBookingId').innerText = currentSelectedCase.bookingId;
+            document.getElementById('modalDate').innerText = currentSelectedCase.date;
+            document.getElementById('modalSaleType').innerText = currentSelectedCase.saleType;
+            document.getElementById('modalMcoValue').innerText = `${currentSelectedCase.mcoCurrency === 'USD' ? '$' : 'CA$'}${currentSelectedCase.mcoAmount.toFixed(2)}`;
+            document.getElementById('modalPassengers').innerText = currentSelectedCase.passengers.join(', ');
+            document.getElementById('modalPhone').innerText = currentSelectedCase.phone;
+            document.getElementById('modalEmail').innerText = currentSelectedCase.email;
+
+            // Supervisor Assignment Control
+            const supControl = document.getElementById('supervisorAssignControl');
+            if (currentUser.role === 'SUPERVISOR') {
+                supControl.classList.remove('hidden');
+                const users = getUsers().filter(u => u.dept === 'CS');
+                const assignSelect = document.getElementById('modalAssignCsSelect');
+                assignSelect.innerHTML = users.map(u => `<option value="${u.username}" ${currentSelectedCase.assignedTo === u.username ? 'selected' : ''}>${u.fullName} (${u.username})</option>`).join('');
+            } else {
+                supControl.classList.add('hidden');
+            }
+
+            // Render AGENT REMARKS FEED (Soft lighter color #94a3b8)
+            renderModalRemarksFeed();
+
+            // Setup CS Edit Fields
+            const csStatusSelect = document.getElementById('modalUpdateStatus');
+            csStatusSelect.innerHTML = CS_STATUSES.map(s => `<option value="${s}" ${currentSelectedCase.status === s ? 'selected' : ''}>${s}</option>`).join('');
+            document.getElementById('modalFollowUpDate').value = currentSelectedCase.followUpDate || '';
+            document.getElementById('modalActionRemarks').value = '';
+            document.getElementById('modalFileNameDisplay').innerText = 'No file attached';
+            selectedModalFile = null;
+
+            document.getElementById('caseDetailModal').classList.remove('hidden');
+        }
+
+        function closeCaseModal() {
+            document.getElementById('caseDetailModal').classList.add('hidden');
+            currentSelectedCase = null;
+        }
+
+        function renderModalRemarksFeed() {
+            const feedContainer = document.getElementById('modalFeedContainer');
+            if (!currentSelectedCase.feed || currentSelectedCase.feed.length === 0) {
+                feedContainer.innerHTML = '<div class="text-xs text-slate-500 italic">No remarks recorded yet.</div>';
+                return;
+            }
+
+            feedContainer.innerHTML = currentSelectedCase.feed.map(item => `
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-700/60 space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-circle text-brand-400"></i>
+                            ${item.author} <span class="text-[10px] text-slate-500 font-normal">(${item.role})</span>
+                        </span>
+                        <span class="text-[10px] text-slate-500">${new Date(item.timestamp).toLocaleString()}</span>
+                    </div>
+                    <!-- Soft light remarks text formatting (#94a3b8) -->
+                    <p class="text-xs text-slate-400 leading-relaxed pl-1 border-l-2 border-brand-500/40">
+                        ${item.text}
+                    </p>
+                    ${item.attachmentName ? `
+                        <div class="pt-1 flex items-center gap-2">
+                            <span class="px-2 py-0.5 bg-slate-800 text-cyan-400 border border-slate-700 rounded text-[10px] flex items-center gap-1">
+                                <i class="fa-solid fa-paperclip"></i> ${item.attachmentName}
+                            </span>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function openActivityLogModal() {
+            if (!currentSelectedCase) return;
+
+            const container = document.getElementById('activityLogContent');
+            const logs = currentSelectedCase.auditLogs || [];
+
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 italic text-center py-4">No activity history logged.</div>';
+            } else {
+                container.innerHTML = logs.map(l => `
+                    <div class="p-3 bg-slate-800/80 rounded-lg border border-slate-700/70 flex items-start space-x-3">
+                        <div class="p-1.5 bg-brand-500/10 text-brand-400 rounded-full mt-0.5"><i class="fa-solid fa-history"></i></div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <strong class="text-slate-200">${l.actor}</strong>
+                                <span class="text-[10px] text-slate-500">${l.timestamp}</span>
+                            </div>
+                            <div class="text-slate-400 mt-1">${l.action}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('activityLogModal').classList.remove('hidden');
+        }
+
+        function closeActivityLogModal() {
+            document.getElementById('activityLogModal').classList.add('hidden');
+        }
+
+        function handleModalFileSelection(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedModalFile = {
+                    name: file.name,
+                    size: (file.size / 1024).toFixed(1) + ' KB',
+                    type: file.type.includes('pdf') ? 'pdf' : 'image',
+                    url: URL.createObjectURL(file)
+                };
+                document.getElementById('modalFileNameDisplay').innerText = `${file.name} (${selectedModalFile.size})`;
+            }
+        }
+
+        function submitCsCaseUpdate() {
+            if (!currentSelectedCase) return;
+
+            const newStatus = document.getElementById('modalUpdateStatus').value;
+            const followUp = document.getElementById('modalFollowUpDate').value;
+            const actionRemarks = document.getElementById('modalActionRemarks').value.trim();
+
+            if (!actionRemarks) {
+                alert('Please enter action remarks.');
+                return;
+            }
+
+            const cases = getCases();
+            const idx = cases.findIndex(c => c.caseId === currentSelectedCase.caseId);
+
+            if (idx !== -1) {
+                const targetCase = cases[idx];
+                const prevStatus = targetCase.status;
+
+                targetCase.status = newStatus;
+                targetCase.followUpDate = followUp;
+
+                // Add to Feed
+                targetCase.feed.unshift({
+                    author: currentUser.username,
+                    role: currentUser.role === 'SUPERVISOR' ? 'Supervisor' : 'CS Agent',
+                    text: actionRemarks,
+                    timestamp: new Date().toISOString(),
+                    attachmentName: selectedModalFile ? selectedModalFile.name : null
+                });
+
+                if (selectedModalFile) {
+                    targetCase.attachments.push(selectedModalFile);
+                }
+
+                // Add to Audit Log
+                targetCase.auditLogs.unshift({
+                    timestamp: new Date().toLocaleString(),
+                    actor: currentUser.username,
+                    action: `Updated status from '${prevStatus}' to '${newStatus}'. Remarks: ${actionRemarks}`
+                });
+
+                saveCases(cases);
+                currentSelectedCase = targetCase;
+
+                alert('CS response and case status saved!');
+                openCaseModal(currentSelectedCase.caseId); // Refresh modal view
+                renderCasesTable();
+            }
+        }
+
+        function saveAssignmentChange() {
+            if (!currentSelectedCase) return;
+            const newAssignee = document.getElementById('modalAssignCsSelect').value;
+
+            const cases = getCases();
+            const idx = cases.findIndex(c => c.caseId === currentSelectedCase.caseId);
+
+            if (idx !== -1) {
+                cases[idx].assignedTo = newAssignee;
+                cases[idx].auditLogs.unshift({
+                    timestamp: new Date().toLocaleString(),
+                    actor: currentUser.username,
+                    action: `Reassigned case to CS agent: ${newAssignee}`
+                });
+
+                saveCases(cases);
+                currentSelectedCase = cases[idx];
+                alert(`Case reassigned to ${newAssignee}!`);
+                renderCasesTable();
+            }
+        }
+    </script>
+</body>
+</html>
